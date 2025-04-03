@@ -1,18 +1,16 @@
+import os
+import pprint as p
+
+from dotenv import load_dotenv
 from flask import Flask, render_template, jsonify
 from flask import request
-
 from twilio.jwt.access_token import AccessToken
 from twilio.jwt.access_token.grants import VoiceGrant
 from twilio.twiml.voice_response import VoiceResponse, Dial
 
-from dotenv import load_dotenv
-import os
-import pprint as p
-
 load_dotenv()
 
 account_sid = os.environ['TWILIO_ACCOUNT_SID']
-# auth_token = os.environ['TWILIO_AUTH_TOKEN']
 api_key = os.environ['TWILIO_API_KEY_SID']
 api_key_secret = os.environ['TWILIO_API_KEY_SECRET']
 twiml_app_sid = os.environ['TWIML_APP_SID']
@@ -44,7 +42,7 @@ def get_token():
     access_token.add_grant(voice_grant)
 
     response = jsonify(
-        {'token': access_token.to_jwt().decode(), 'identity': identity})
+        {'token': access_token.to_jwt(), 'identity': identity})
     response.headers.add('Access-Control-Allow-Origin', '*')
 
     return response
