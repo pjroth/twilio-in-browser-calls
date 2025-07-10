@@ -29,7 +29,16 @@ def home():
 
 @app.route('/token', methods=['GET'])
 def get_token():
-    identity = twilio_number
+    # Require user_id parameter
+    user_id = request.args.get('user_id')
+    if not user_id:
+        # Return error if user_id is not provided
+        response = jsonify({'error': 'user_id parameter is required'})
+        response.status_code = 400
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        return response
+        
+    identity = user_id
     outgoing_application_sid = twiml_app_sid
 
     access_token = AccessToken(account_sid, api_key,
@@ -52,16 +61,31 @@ def get_token():
 def call():
     p.pprint(request.form)
     response = VoiceResponse()
-    dial = Dial(callerId=twilio_number)
+    
+    # Get identity from the request (should be the user_id)
+    identity = request.form.get('From', twilio_number)
+    
+    dial = Dial(callerId=identity)
 
     if 'To' in request.form and request.form['To'] != twilio_number:
-        print('outbound call')
-        dial.number(request.form['To'])
+        # Get the 'To' value
+        to_value = request.form['To']
+        
+        # For our use case, we're going to treat all values as client identifiers
+        # unless they explicitly match the full phone number format with country code
+        if to_value.startswith('+') and to_value[1:].isdigit() and len(to_value) >= 10:
+            # This is definitely a PSTN call to a phone number with country code
+            print('outbound call to phone number')
+            dial.number(to_value)
+        else:
+            # This is a client-to-client call
+            print(f'outbound client-to-client call to: {to_value}')
+            dial.client(to_value)
     else:
         print('incoming call')
         caller = request.form['Caller']
         dial = Dial(callerId=caller)
-        dial.client(twilio_number)
+        dial.client(identity)
 
     return str(response.append(dial))
 

@@ -1,78 +1,120 @@
 $(function () {
     var device;
 
-    log("Requesting Access Token...");
-    // Using a relative link to access the Voice Token function
-    $.getJSON("./token")
-        .then(function (data) {
-            log("Got a token.");
-            console.log("Token: " + data.token);
+    // Disable the dial button initially
+    $("#btnOpenNumberPad").prop("disabled", true);
 
-            // Setup Twilio.Device
-            device = new Twilio.Device(data.token, {
-                // Set Opus as our preferred codec. Opus generally performs better, requiring less bandwidth and
-                // providing better audio quality in restrained network conditions. Opus will be default in 2.0.
-                codecPreferences: ["opus", "pcmu"],
-                // Use fake DTMF tones client-side. Real tones are still sent to the other end of the call,
-                // but the client-side DTMF tones are fake. This prevents the local mic capturing the DTMF tone
-                // a second time and sending the tone twice. This will be default in 2.0.
-                fakeLocalDTMF: true,
-                // Use `enableRingingState` to enable the device to emit the `ringing`
-                // state. The TwiML backend also needs to have the attribute
-                // `answerOnBridge` also set to true in the `Dial` verb. This option
-                // changes the behavior of the SDK to consider a call `ringing` starting
-                // from the connection to the TwiML backend to when the recipient of
-                // the `Dial` verb answers.
-                enableRingingState: true,
-                debug: true,
-            });
+    // Function to handle user ID submission
+    function submitUserId() {
+        var userId = $("#userId").val().trim();
+        if (userId) {
+            fetchToken(userId);
+        } else {
+            log("Please enter a valid user ID");
+        }
+    }
+    
+    // Set User ID button click handler
+    $("#btnSetUserId").on("click", submitUserId);
+    
+    // Handle Enter key press in the user ID input field
+    $("#userId").on("keypress", function(event) {
+        if (event.which === 13) { // 13 is the Enter key code
+            event.preventDefault();
+            submitUserId();
+        }
+    });
 
-            device.on("ready", function (device) {
-                log("Twilio.Device Ready!");
-            });
+    // Function to fetch token with user ID
+    function fetchToken(userId) {
+        log("Requesting Access Token for user ID: " + userId);
+        // Using a relative link to access the Voice Token function with user_id parameter
+        $.ajax({
+            url: "./token",
+            data: { user_id: userId },
+            dataType: "json",
+            success: function(data) {
+                if (data.error) {
+                    // Handle error response
+                    log("Error: " + data.error);
+                    console.log("Error: " + data.error);
+                    return;
+                }
 
-            device.on("error", function (error) {
-                log("Twilio.Device Error: " + error.message);
-            });
+                log("Got a token.");
+                console.log("Token: " + data.token);
 
-            device.on("connect", function (conn) {
-                log('Successfully established call ! ');
-                $('#modal-call-in-progress').modal('show')
-            });
+                // Setup Twilio.Device
+                device = new Twilio.Device(data.token, {
+                    // Set Opus as our preferred codec. Opus generally performs better, requiring less bandwidth and
+                    // providing better audio quality in restrained network conditions. Opus will be default in 2.0.
+                    codecPreferences: ["opus", "pcmu"],
+                    // Use fake DTMF tones client-side. Real tones are still sent to the other end of the call,
+                    // but the client-side DTMF tones are fake. This prevents the local mic capturing the DTMF tone
+                    // a second time and sending the tone twice. This will be default in 2.0.
+                    fakeLocalDTMF: true,
+                    // Use `enableRingingState` to enable the device to emit the `ringing`
+                    // state. The TwiML backend also needs to have the attribute
+                    // `answerOnBridge` also set to true in the `Dial` verb. This option
+                    // changes the behavior of the SDK to consider a call `ringing` starting
+                    // from the connection to the TwiML backend to when the recipient of
+                    // the `Dial` verb answers.
+                    enableRingingState: true,
+                    debug: true,
+                });
 
-            device.on("disconnect", function (conn) {
-                log("Call ended.");
-                $('.modal').modal('hide')
-            });
+                device.on("ready", function(device) {
+                    log("Twilio.Device Ready!");
+                });
+                
+                device.on("error", function(error) {
+                    log("Twilio.Device Error: " + error.message);
+                });
 
-            device.on("incoming", function (conn) {
-                console.log(conn.parameters)
-                log("Incoming connection from " + conn.parameters.From);
-                $("#callerNumber").text(conn.parameters.From)
-                $("#txtPhoneNumber").text(conn.parameters.From)
+                device.on("connect", function(conn) {
+                    log('Successfully established call ! ');
+                    $('#modal-call-in-progress').modal('show')
+                });
 
-                $('#modal-incomming-call').modal('show')
-
-                $('.btnReject').bind('click', function () {
+                device.on("disconnect", function(conn) {
+                    log("Call ended.");
                     $('.modal').modal('hide')
-                    log("Rejected call ...");
-                    conn.reject();
-                })
+                });
 
-                $('.btnAcceptCall').bind('click', function () {
-                    $('.modal').modal('hide')
-                    log("Accepted call ...");
-                    conn.accept();
-                })
+                device.on("incoming", function(conn) {
+                    console.log(conn.parameters)
+                    log("Incoming connection from " + conn.parameters.From);
+                    $("#callerNumber").text(conn.parameters.From)
+                    $("#txtPhoneNumber").text(conn.parameters.From)
 
-            });
+                    $('#modal-incomming-call').modal('show')
 
+                    $('.btnReject').bind('click', function() {
+                        $('.modal').modal('hide')
+                        log("Rejected call ...");
+                        conn.reject();
+                    })
 
-        })
-        .catch(function (err) {
-            console.log(err);
-            log("Could not get a token from server!");
+                    $('.btnAcceptCall').bind('click', function() {
+                        $('.modal').modal('hide')
+                        log("Accepted call ...");
+                        conn.accept();
+                    })
+                });
+
+                // Enable the dial button once we have a token
+                $("#btnOpenNumberPad").prop("disabled", false);
+            },
+            error: function(jqXHR, textStatus, errorThrown) {
+                console.log(jqXHR.responseJSON || errorThrown);
+                if (jqXHR.responseJSON && jqXHR.responseJSON.error) {
+                    log("Error: " + jqXHR.responseJSON.error);
+                } else {
+                    log("Could not get a token from server!");
+                }
+            }
         });
+    }
 
     // Bind button to make call
     $('#btnDial').bind('click', function () {

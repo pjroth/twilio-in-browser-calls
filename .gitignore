@@ -87,7 +87,7 @@ ipython_config.py
 .python-version
 env/
 venv/
-.env
+.env*
 
 
 # pipenv
