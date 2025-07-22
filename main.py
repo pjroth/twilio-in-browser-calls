@@ -87,6 +87,7 @@ def call():
         dial = Dial(callerId=caller)
         dial.client(identity)
 
+    print(str(response.append(dial)))
     return str(response.append(dial))
 
 
