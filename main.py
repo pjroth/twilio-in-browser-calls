@@ -80,7 +80,15 @@ def call():
         else:
             # This is a client-to-client call
             print(f'outbound client-to-client call to: {to_value}')
-            dial.client(to_value)
+            client = dial.client(to_value)
+            client.parameter(name='FirstName', value='Joe')
+            client.parameter(name='MiddleInitial', value='Q.')
+            client.parameter(name='LastName', value='Python')
+            client.parameter(name='SubjectStatus', value='Recruiting')
+            client.parameter(name='SubjectId', value='-7')
+            client.parameter(name='SessionId', value='-42')
+            dial.append(client)
+            response.append(dial)
     else:
         print('incoming call')
         caller = request.form['Caller']
