@@ -87,16 +87,15 @@ def call():
             client.parameter(name='SubjectStatus', value='Recruiting')
             client.parameter(name='SubjectId', value='-7')
             client.parameter(name='SessionId', value='-42')
-            dial.append(client)
-            response.append(dial)
     else:
         print('incoming call')
         caller = request.form['Caller']
         dial = Dial(callerId=caller)
         dial.client(identity)
 
-    print(str(response.append(dial)))
-    return str(response.append(dial))
+    response.append(dial)
+    print(str(response))
+    return str(response)
 
 
 if __name__ == "__main__":
